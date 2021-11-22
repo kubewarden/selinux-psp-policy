@@ -93,29 +93,35 @@ impl SELinuxLevel {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-#[serde(tag = "rule")]
-pub(crate) enum Rule {
+#[serde(tag = "rule", deny_unknown_fields)]
+pub(crate) enum Settings {
     MustRunAs(SELinuxOptions),
     RunAsAny,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[serde(default)]
-pub(crate) struct Settings {
-    #[serde(flatten)]
-    pub rule: Rule,
-}
-
 impl Default for Settings {
     fn default() -> Settings {
-        Settings {
-            rule: Rule::RunAsAny,
-        }
+        Settings::RunAsAny
     }
 }
 
 impl kubewarden::settings::Validatable for Settings {
     fn validate(&self) -> Result<(), String> {
-        Ok(())
+        match self {
+            Settings::RunAsAny => Ok(()),
+            Settings::MustRunAs(selinux_options) => {
+                if selinux_options.user.is_none()
+                    && selinux_options.role.is_none()
+                    && selinux_options.type_.is_none()
+                    && selinux_options.level.is_none()
+                {
+                    return Err(
+                        "you have to provide at least a user, group, type or level settings"
+                            .to_string(),
+                    );
+                }
+                Ok(())
+            }
+        }
     }
 }

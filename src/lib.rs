@@ -9,7 +9,7 @@ extern crate kubewarden_policy_sdk as kubewarden;
 use kubewarden::{protocol_version_guest, request::ValidationRequest, validate_settings};
 
 mod settings;
-use settings::{Rule, SELinuxLevel, SELinuxOptions, Settings};
+use settings::{SELinuxLevel, SELinuxOptions, Settings};
 
 #[no_mangle]
 pub extern "C" fn wapc_init() {
@@ -45,8 +45,8 @@ fn validate(payload: &[u8]) -> CallResult {
 fn do_validate(pod: apicore::Pod, settings: settings::Settings) -> Result<PolicyResponse> {
     let pod_spec = pod.spec.ok_or_else(|| anyhow!("invalid pod spec"))?;
 
-    match settings.rule {
-        Rule::MustRunAs(expected_selinux_options) => {
+    match settings {
+        Settings::MustRunAs(expected_selinux_options) => {
             let pod_with_defaulted_selinux_options = apicore::Pod {
                 spec: Some(apicore::PodSpec {
                     security_context: Some(apicore::PodSecurityContext {
@@ -130,7 +130,7 @@ fn do_validate(pod: apicore::Pod, settings: settings::Settings) -> Result<Policy
 
             Ok(PolicyResponse::Accept)
         }
-        Rule::RunAsAny => Ok(PolicyResponse::Accept),
+        Settings::RunAsAny => Ok(PolicyResponse::Accept),
     }
 }
 
@@ -176,9 +176,7 @@ mod tests {
                     spec: Some(apicore::PodSpec::default()),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::RunAsAny,
-                }
+                Settings::RunAsAny,
             )?,
             PolicyResponse::Accept
         );
@@ -211,12 +209,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        role: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    role: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -237,12 +233,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        user: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    user: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -263,12 +257,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        type_: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    type_: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -301,12 +293,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        role: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    role: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -327,12 +317,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        user: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    user: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -353,12 +341,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        type_: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    type_: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -393,12 +379,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        role: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    role: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -421,12 +405,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        user: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    user: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -449,12 +431,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        type_: Some("invalid".to_string()),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    type_: Some("invalid".to_string()),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -487,12 +467,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        level: Some(SELinuxLevel::new("s0:c1,c2".to_string())?),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    level: Some(SELinuxLevel::new("s0:c1,c2".to_string())?),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -525,12 +503,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        level: Some(SELinuxLevel::new("s0:c6".to_string())?),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    level: Some(SELinuxLevel::new("s0:c6".to_string())?),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -563,12 +539,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        level: Some(SELinuxLevel::new("s0:c0,c8".to_string())?),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    level: Some(SELinuxLevel::new("s0:c0,c8".to_string())?),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
@@ -601,12 +575,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        level: Some(SELinuxLevel::new("s0:c1,c7".to_string())?),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    level: Some(SELinuxLevel::new("s0:c1,c7".to_string())?),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Accept
         );
@@ -639,12 +611,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        level: Some(SELinuxLevel::new("s0:c7,c1".to_string())?),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    level: Some(SELinuxLevel::new("s0:c7,c1".to_string())?),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Accept
         );
@@ -673,12 +643,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        level: Some(SELinuxLevel::new("s0:c7,c1".to_string())?),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    level: Some(SELinuxLevel::new("s0:c7,c1".to_string())?),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Mutate(serde_json::to_value(apicore::Pod {
                 spec: Some(apicore::PodSpec {
@@ -725,12 +693,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        level: Some(SELinuxLevel::new("s0:c7,c1".to_string())?),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    level: Some(SELinuxLevel::new("s0:c7,c1".to_string())?),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Mutate(serde_json::to_value(apicore::Pod {
                 spec: Some(apicore::PodSpec {
@@ -787,12 +753,10 @@ mod tests {
                     }),
                     ..apicore::Pod::default()
                 },
-                Settings {
-                    rule: Rule::MustRunAs(SELinuxOptions {
-                        level: Some(SELinuxLevel::new("s0:c7,c1".to_string())?),
-                        ..selinux_options.clone()
-                    }),
-                }
+                Settings::MustRunAs(SELinuxOptions {
+                    level: Some(SELinuxLevel::new("s0:c7,c1".to_string())?),
+                    ..selinux_options.clone()
+                }),
             )?,
             PolicyResponse::Reject("SELinux validation failed".to_string())
         );
