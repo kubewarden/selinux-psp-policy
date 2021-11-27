@@ -1,6 +1,6 @@
 name: psp-selinux
 description: Replacement for the Kubernetes Pod Security Policy that controls the usage of SELinux
-homepage: https://github.com/kubewarden/psp-selinux
+homepage: https://github.com/kubewarden/selinux-psp-policy
 author:
   name: Kubewarden devs
   homepage: https://github.com/kubewarden
@@ -8,7 +8,7 @@ download:
   # Important: leave the __TAG__ around: this is automatically replaced with the value of the git tag
   registry: ghcr.io/kubewarden/policies/psp-selinux:__TAG__
   # url is optional
-  url: https://github.com/kubewarden/psp-selinux/releases/download/__TAG__/policy.wasm
+  url: https://github.com/kubewarden/selinux-psp-policy/releases/download/__TAG__/policy.wasm
 keywords:
   - PSP
   - Container

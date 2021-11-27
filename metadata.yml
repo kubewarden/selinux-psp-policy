@@ -10,8 +10,8 @@ annotations:
   io.kubewarden.policy.title: psp-selinux
   io.kubewarden.policy.description: Replacement for the Kubernetes Pod Security Policy that controls the usage of SELinux
   io.kubewarden.policy.author: Rafael Fernández López <rfernandezlopez@suse.com>
-  io.kubewarden.policy.url: https://github.com/kubewarden/psp-selinux
-  io.kubewarden.policy.source: https://github.com/kubewarden/psp-selinux
+  io.kubewarden.policy.url: https://github.com/kubewarden/selinux-psp-policy
+  io.kubewarden.policy.source: https://github.com/kubewarden/selinux-psp-policy
   io.kubewarden.policy.license: Apache-2.0
   io.kubewarden.policy.usage: |
     Replacement for the Kubernetes Pod Security Policy that controls the usage of SELinux in the pod
