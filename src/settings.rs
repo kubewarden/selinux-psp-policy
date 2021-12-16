@@ -1,6 +1,9 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::{cmp::PartialEq, convert::TryFrom};
+use std::{
+    cmp::PartialEq,
+    convert::{TryFrom, TryInto},
+};
 
 use k8s_openapi::api::core::v1 as apicore;
 
@@ -13,7 +16,7 @@ pub(crate) struct SELinuxOptionsExternal {
     level: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub(crate) struct SELinuxOptions {
     pub(crate) user: Option<String>,
     pub(crate) role: Option<String>,
@@ -21,9 +24,9 @@ pub(crate) struct SELinuxOptions {
     pub(crate) level: Option<SELinuxLevel>,
 }
 
-impl TryFrom<&SELinuxOptionsExternal> for SELinuxOptions {
+impl TryFrom<SELinuxOptionsExternal> for SELinuxOptions {
     type Error = anyhow::Error;
-    fn try_from(selinux_options_external: &SELinuxOptionsExternal) -> Result<SELinuxOptions> {
+    fn try_from(selinux_options_external: SELinuxOptionsExternal) -> Result<SELinuxOptions> {
         let level = if let Some(ref level) = selinux_options_external.level {
             Some(SELinuxLevel::new(level.clone())?)
         } else {
@@ -32,7 +35,7 @@ impl TryFrom<&SELinuxOptionsExternal> for SELinuxOptions {
         Ok(SELinuxOptions {
             user: selinux_options_external.user.clone(),
             role: selinux_options_external.role.clone(),
-            type_: selinux_options_external.type_.clone(),
+            type_: selinux_options_external.type_,
             level,
         })
     }
@@ -92,24 +95,42 @@ impl SELinuxLevel {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "rule", deny_unknown_fields)]
+pub(crate) enum ExternalSettings {
+    MustRunAs(SELinuxOptionsExternal),
+    RunAsAny,
+}
+
+impl Default for ExternalSettings {
+    fn default() -> ExternalSettings {
+        ExternalSettings::RunAsAny
+    }
+}
+
+#[derive(Clone, Debug)]
 pub(crate) enum Settings {
     MustRunAs(SELinuxOptions),
     RunAsAny,
 }
 
-impl Default for Settings {
-    fn default() -> Settings {
-        Settings::RunAsAny
+impl TryFrom<ExternalSettings> for Settings {
+    type Error = anyhow::Error;
+    fn try_from(settings: ExternalSettings) -> Result<Settings> {
+        match settings {
+            ExternalSettings::MustRunAs(selinux_options) => {
+                Ok(Settings::MustRunAs(selinux_options.try_into()?))
+            }
+            ExternalSettings::RunAsAny => Ok(Settings::RunAsAny),
+        }
     }
 }
 
-impl kubewarden::settings::Validatable for Settings {
+impl kubewarden::settings::Validatable for ExternalSettings {
     fn validate(&self) -> Result<(), String> {
         match self {
-            Settings::RunAsAny => Ok(()),
-            Settings::MustRunAs(selinux_options) => {
+            ExternalSettings::RunAsAny => Ok(()),
+            ExternalSettings::MustRunAs(selinux_options) => {
                 if selinux_options.user.is_none()
                     && selinux_options.role.is_none()
                     && selinux_options.type_.is_none()

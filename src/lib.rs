@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use std::convert::TryInto;
 
 extern crate wapc_guest as guest;
 use guest::prelude::*;
@@ -9,12 +10,12 @@ extern crate kubewarden_policy_sdk as kubewarden;
 use kubewarden::{protocol_version_guest, request::ValidationRequest, validate_settings};
 
 mod settings;
-use settings::{SELinuxLevel, SELinuxOptions, Settings};
+use settings::{ExternalSettings, SELinuxLevel, SELinuxOptions, Settings};
 
 #[no_mangle]
 pub extern "C" fn wapc_init() {
     register_function("validate", validate);
-    register_function("validate_settings", validate_settings::<Settings>);
+    register_function("validate_settings", validate_settings::<ExternalSettings>);
     register_function("protocol_version", protocol_version_guest);
 }
 
@@ -26,14 +27,17 @@ enum PolicyResponse {
 }
 
 fn validate(payload: &[u8]) -> CallResult {
-    let validation_request: ValidationRequest<Settings> = ValidationRequest::new(payload)?;
+    let validation_request: ValidationRequest<ExternalSettings> = ValidationRequest::new(payload)?;
+
+    let settings: Settings = match validation_request.settings.try_into() {
+        Ok(settings) => settings,
+        Err(err) => return kubewarden::reject_request(Some(err.to_string()), None),
+    };
 
     let pod = match serde_json::from_value::<apicore::Pod>(validation_request.request.object) {
         Ok(pod) => pod,
         Err(_) => return kubewarden::accept_request(),
     };
-
-    let settings = validation_request.settings;
 
     match do_validate(pod, settings)? {
         PolicyResponse::Accept => kubewarden::accept_request(),
