@@ -29,10 +29,9 @@ enum PolicyResponse {
 fn validate(payload: &[u8]) -> CallResult {
     let validation_request: ValidationRequest<ExternalSettings> = ValidationRequest::new(payload)?;
 
-    let settings: Settings = match validation_request.settings.try_into() {
-        Ok(settings) => settings,
-        Err(err) => return kubewarden::reject_request(Some(err.to_string()), None),
-    };
+    // It is safe to unwrap here, because the validate_settings function already made sure that
+    // ExternalSettings can be converted to Settings.
+    let settings: Settings = validation_request.settings.try_into().unwrap();
 
     let pod = match serde_json::from_value::<apicore::Pod>(validation_request.request.object) {
         Ok(pod) => pod,

@@ -7,7 +7,7 @@ use std::{
 
 use k8s_openapi::api::core::v1 as apicore;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub(crate) struct SELinuxOptionsExternal {
     user: Option<String>,
     role: Option<String>,
@@ -95,7 +95,7 @@ impl SELinuxLevel {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "rule", deny_unknown_fields)]
 pub(crate) enum ExternalSettings {
     MustRunAs(SELinuxOptionsExternal),
@@ -140,6 +140,9 @@ impl kubewarden::settings::Validatable for ExternalSettings {
                         "you have to provide at least a user, group, type or level settings"
                             .to_string(),
                     );
+                }
+                if let Err(err) = TryInto::<Settings>::try_into(self.clone()) {
+                    return Err(format!("settings are invalid: {}", err));
                 }
                 Ok(())
             }
