@@ -2,7 +2,9 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::PartialEq,
+    collections::HashSet,
     convert::{TryFrom, TryInto},
+    iter::FromIterator,
 };
 
 use k8s_openapi::api::core::v1 as apicore;
@@ -57,6 +59,7 @@ pub(crate) struct SELinuxLevel {
     level: String,
     sensitivity: String,
     categories: Vec<String>,
+    categories_hashset: HashSet<String>,
 }
 
 impl PartialEq for SELinuxLevel {
@@ -64,7 +67,8 @@ impl PartialEq for SELinuxLevel {
         if self.level == selinux_level.level {
             return true;
         }
-        self.sensitivity == selinux_level.sensitivity && self.categories == selinux_level.categories
+        self.sensitivity == selinux_level.sensitivity
+            && self.categories_hashset == selinux_level.categories_hashset
     }
 }
 
@@ -81,16 +85,17 @@ impl SELinuxLevel {
             splitted_level.next().unwrap(),
             splitted_level.next().unwrap(),
         );
-        let mut splitted_categories: Vec<String> = categories
+        let splitted_categories: Vec<String> = categories
             .split(',')
             .into_iter()
             .map(String::from)
             .collect();
-        splitted_categories.sort();
+        let categories_hashset = HashSet::from_iter(splitted_categories.clone().into_iter());
         Ok(SELinuxLevel {
             level: level.clone(),
             sensitivity: sensitivity.to_string(),
             categories: splitted_categories,
+            categories_hashset,
         })
     }
 }

@@ -46,88 +46,98 @@ fn validate(payload: &[u8]) -> CallResult {
 }
 
 fn do_validate(pod: apicore::Pod, settings: settings::Settings) -> Result<PolicyResponse> {
-    let pod_spec = pod.spec.ok_or_else(|| anyhow!("invalid pod spec"))?;
-
+    let orig_pod = pod.clone();
     match settings {
         Settings::MustRunAs(expected_selinux_options) => {
-            let pod_with_defaulted_selinux_options = apicore::Pod {
-                spec: Some(apicore::PodSpec {
-                    security_context: Some(apicore::PodSecurityContext {
-                        se_linux_options: Some(expected_selinux_options.clone().into()),
-                        ..apicore::PodSecurityContext::default()
-                    }),
-                    ..pod_spec.clone()
-                }),
-                ..apicore::Pod::default()
-            };
+            let mut pod_spec = pod.spec.ok_or_else(|| anyhow!("invalid pod spec"))?;
 
-            // If the pod has no SELinuxOptions, we default it to the expected value. We still have
-            // to check that all containers meet the SELinux requirements set by the configuration
-            // because individual containers might override the default PodSecurityContext SELinux
-            // options
-
-            let mut has_to_mutate = false;
-            let pod_selinux_options = if let Some(pod_security_context) = pod_spec.security_context
-            {
-                if let Some(selinux_options) = pod_security_context.se_linux_options {
-                    selinux_options
+            if let Some(ref security_context) = pod_spec.security_context {
+                if let Some(ref selinux_options) = security_context.se_linux_options {
+                    if !is_selinux_compliant(selinux_options, &expected_selinux_options) {
+                        return Ok(PolicyResponse::Reject(
+                            "SELinux validation failed".to_string(),
+                        ));
+                    }
                 } else {
-                    has_to_mutate = true;
-                    expected_selinux_options.clone().into()
+                    pod_spec.security_context = Some(apicore::PodSecurityContext {
+                        se_linux_options: Some(expected_selinux_options.clone().into()),
+                        ..security_context.clone()
+                    })
                 }
             } else {
-                has_to_mutate = true;
-                expected_selinux_options.clone().into()
-            };
-
-            let all_compliant_containers = pod_spec.containers.into_iter().all(|container| {
-                is_selinux_compliant(
-                    &container.security_context,
-                    expected_selinux_options.clone(),
-                    &pod_selinux_options,
-                )
-            });
-
-            let all_compliant_init_containers = pod_spec
-                .init_containers
-                .unwrap_or_else(Vec::new)
-                .into_iter()
-                .all(|container| {
-                    is_selinux_compliant(
-                        &container.security_context,
-                        expected_selinux_options.clone(),
-                        &pod_selinux_options,
-                    )
-                });
-
-            let all_compliant_ephemeral_containers = pod_spec
-                .ephemeral_containers
-                .unwrap_or_else(Vec::new)
-                .into_iter()
-                .all(|container| {
-                    is_selinux_compliant(
-                        &container.security_context,
-                        expected_selinux_options.clone(),
-                        &pod_selinux_options,
-                    )
-                });
-
-            if !all_compliant_containers
-                || !all_compliant_init_containers
-                || !all_compliant_ephemeral_containers
-            {
-                return Ok(PolicyResponse::Reject(
-                    "SELinux validation failed".to_string(),
-                ));
+                pod_spec.security_context = Some(apicore::PodSecurityContext {
+                    se_linux_options: Some(expected_selinux_options.clone().into()),
+                    ..apicore::PodSecurityContext::default()
+                })
             }
 
-            // Mutating is the last step -- if needed. If we are defaulting the SELinux options of
-            // the pod security context, at this point we have to have already confirmed that _all_
-            // containers meet the desired SELinux options that we are defaulting to.
+            let default_container = |container: &mut apicore::Container| {
+                if let Some(ref security_context) = container.security_context {
+                    if let Some(ref selinux_options) = security_context.se_linux_options {
+                        if !is_selinux_compliant(selinux_options, &expected_selinux_options) {
+                            return Some(PolicyResponse::Reject(
+                                "SELinux validation failed".to_string(),
+                            ));
+                        }
+                    } else {
+                        container.security_context = Some(apicore::SecurityContext {
+                            se_linux_options: Some(expected_selinux_options.clone().into()),
+                            ..security_context.clone()
+                        });
+                    }
+                } else {
+                    container.security_context = Some(apicore::SecurityContext {
+                        se_linux_options: Some(expected_selinux_options.clone().into()),
+                        ..apicore::SecurityContext::default()
+                    });
+                };
+                None
+            };
 
-            if has_to_mutate {
+            for container in pod_spec.containers.iter_mut() {
+                if let Some(early_response) = default_container(container) {
+                    return Ok(early_response);
+                }
+            }
+
+            if let Some(ref mut init_containers) = pod_spec.init_containers {
+                for container in init_containers.iter_mut() {
+                    if let Some(early_response) = default_container(container) {
+                        return Ok(early_response);
+                    }
+                }
+            }
+
+            if let Some(ref mut ephemeral_containers) = pod_spec.ephemeral_containers {
+                for container in ephemeral_containers.iter_mut() {
+                    if let Some(ref security_context) = container.security_context {
+                        if let Some(ref selinux_options) = security_context.se_linux_options {
+                            if !is_selinux_compliant(selinux_options, &expected_selinux_options) {
+                                return Ok(PolicyResponse::Reject(
+                                    "SELinux validation failed".to_string(),
+                                ));
+                            }
+                        } else {
+                            container.security_context = Some(apicore::SecurityContext {
+                                se_linux_options: Some(expected_selinux_options.clone().into()),
+                                ..security_context.clone()
+                            });
+                        }
+                    } else {
+                        container.security_context = Some(apicore::SecurityContext {
+                            se_linux_options: Some(expected_selinux_options.clone().into()),
+                            ..apicore::SecurityContext::default()
+                        });
+                    };
+                }
+            }
+
+            if orig_pod.spec != Some(pod_spec.clone()) {
                 return Ok(PolicyResponse::Mutate(serde_json::to_value(
-                    pod_with_defaulted_selinux_options,
+                    apicore::Pod {
+                        spec: Some(pod_spec),
+                        ..orig_pod
+                    },
                 )?));
             }
 
@@ -138,32 +148,23 @@ fn do_validate(pod: apicore::Pod, settings: settings::Settings) -> Result<Policy
 }
 
 fn is_selinux_compliant(
-    security_context: &Option<apicore::SecurityContext>,
-    expected_selinux_options: SELinuxOptions,
-    pod_selinux_options: &apicore::SELinuxOptions,
+    selinux_options: &apicore::SELinuxOptions,
+    expected_selinux_options: &SELinuxOptions,
 ) -> bool {
-    let selinux_options = match security_context {
-        Some(security_context) => security_context
-            .se_linux_options
-            .clone()
-            .unwrap_or_else(|| pod_selinux_options.clone()),
-        None => pod_selinux_options.clone(),
-    };
-
-    if let Some(level) = selinux_options.level {
-        if let Ok(level) = SELinuxLevel::new(level) {
-            SELinuxOptions {
-                user: selinux_options.user,
-                role: selinux_options.role,
-                type_: selinux_options.type_,
-                level: Some(level),
-            } == expected_selinux_options
-        } else {
-            false
+    if let Some(ref expected_level) = expected_selinux_options.level {
+        if let Some(ref level) = selinux_options.level {
+            if let Ok(ref level) = SELinuxLevel::new(level.clone()) {
+                if level != expected_level {
+                    return false;
+                }
+            } else {
+                return false;
+            }
         }
-    } else {
-        false
     }
+    selinux_options.role == expected_selinux_options.role
+        && selinux_options.type_ == expected_selinux_options.type_
+        && selinux_options.user == expected_selinux_options.user
 }
 
 #[cfg(test)]
@@ -568,7 +569,13 @@ mod tests {
                 apicore::Pod {
                     spec: Some({
                         apicore::PodSpec {
-                            containers: vec![apicore::Container::default()],
+                            containers: vec![apicore::Container {
+                                security_context: Some(apicore::SecurityContext {
+                                    se_linux_options: Some(selinux_options.clone().into()),
+                                    ..apicore::SecurityContext::default()
+                                }),
+                                ..apicore::Container::default()
+                            }],
                             security_context: Some(apicore::PodSecurityContext {
                                 se_linux_options: Some(selinux_options.clone().into()),
                                 ..apicore::PodSecurityContext::default()
@@ -604,7 +611,13 @@ mod tests {
                 apicore::Pod {
                     spec: Some({
                         apicore::PodSpec {
-                            containers: vec![apicore::Container::default()],
+                            containers: vec![apicore::Container {
+                                security_context: Some(apicore::SecurityContext {
+                                    se_linux_options: Some(selinux_options.clone().into()),
+                                    ..apicore::SecurityContext::default()
+                                }),
+                                ..apicore::Container::default()
+                            }],
                             security_context: Some(apicore::PodSecurityContext {
                                 se_linux_options: Some(selinux_options.clone().into()),
                                 ..apicore::PodSecurityContext::default()
@@ -653,7 +666,18 @@ mod tests {
             )?,
             PolicyResponse::Mutate(serde_json::to_value(apicore::Pod {
                 spec: Some(apicore::PodSpec {
-                    containers: vec![apicore::Container::default()],
+                    containers: vec![apicore::Container {
+                        security_context: Some(apicore::SecurityContext {
+                            se_linux_options: Some(apicore::SELinuxOptions {
+                                user: Some("user".to_string()),
+                                role: Some("role".to_string()),
+                                level: Some("s0:c7,c1".to_string()),
+                                type_: Some("type".to_string()),
+                            }),
+                            ..apicore::SecurityContext::default()
+                        }),
+                        ..apicore::Container::default()
+                    }],
                     security_context: Some(apicore::PodSecurityContext {
                         se_linux_options: Some(apicore::SELinuxOptions {
                             user: Some("user".to_string()),
@@ -703,7 +727,18 @@ mod tests {
             )?,
             PolicyResponse::Mutate(serde_json::to_value(apicore::Pod {
                 spec: Some(apicore::PodSpec {
-                    containers: vec![apicore::Container::default()],
+                    containers: vec![apicore::Container {
+                        security_context: Some(apicore::SecurityContext {
+                            se_linux_options: Some(apicore::SELinuxOptions {
+                                user: Some("user".to_string()),
+                                role: Some("role".to_string()),
+                                level: Some("s0:c7,c1".to_string()),
+                                type_: Some("type".to_string()),
+                            }),
+                            ..apicore::SecurityContext::default()
+                        }),
+                        ..apicore::Container::default()
+                    }],
                     security_context: Some(apicore::PodSecurityContext {
                         se_linux_options: Some(apicore::SELinuxOptions {
                             user: Some("user".to_string()),
