@@ -1,5 +1,6 @@
 /target
-
+policy.wasm
+policy-annotated.wasm
 
 # Added by cargo
 #
