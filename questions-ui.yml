@@ -39,33 +39,33 @@ questions:
   label: Must run as
   show_if: rule=MustRunAs
   hide_input: true
-  type: map[
+  type: sequence[
   variable: MustRunAs
-  subquestions:
+  sequence_questions:
     - default: ''
       group: Settings
       label: User
       show_if: rule=MustRunAs
       type: string
-      variable: MustRunAs.user
+      variable: user
     - default: ''
       group: Settings
       label: Role
       show_if: rule=MustRunAs
       type: string
-      variable: MustRunAs.role
+      variable: role
     - default: ''
       group: Settings
       label: Type
       show_if: rule=MustRunAs
       type: string
-      variable: MustRunAs.type
+      variable: type
     - default: 0
       group: Settings
       label: Level
       show_if: rule=MustRunAs
       type: int
-      variable: MustRunAs.level
+      variable: level
 - default: false
   tooltip: Always accepts the request.
   group: Settings
