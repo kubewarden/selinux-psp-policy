@@ -1,15 +1,15 @@
 ---
-version: 0.1.6
+version: 0.1.7
 name: selinux-psp
 displayName: Selinux PSP
-createdAt: '2023-01-19T14:46:21+02:00'
+createdAt: '2023-02-13T15:55:48+00:00'
 description: Replacement for the Kubernetes Pod Security Policy that controls the
   usage of SELinux
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/selinux-psp-policy
 containersImages:
 - name: policy
-  image: ghcr.io/kubewarden/policies/selinux-psp:v0.1.6
+  image: ghcr.io/kubewarden/policies/selinux-psp:v0.1.7
 keywords:
 - psp
 - container
@@ -17,7 +17,7 @@ keywords:
 - selinux
 links:
 - name: policy
-  url: https://github.com/kubewarden/selinux-psp-policy/releases/download/v0.1.6/policy.wasm
+  url: https://github.com/kubewarden/selinux-psp-policy/releases/download/v0.1.7/policy.wasm
 - name: source
   url: https://github.com/kubewarden/selinux-psp-policy
 provider:
@@ -76,33 +76,33 @@ annotations:
       label: Must run as
       show_if: rule=MustRunAs
       hide_input: true
-      type: map[
+      type: sequence[
       variable: MustRunAs
-      subquestions:
+      sequence_questions:
         - default: ''
           group: Settings
           label: User
           show_if: rule=MustRunAs
           type: string
-          variable: MustRunAs.user
+          variable: user
         - default: ''
           group: Settings
           label: Role
           show_if: rule=MustRunAs
           type: string
-          variable: MustRunAs.role
+          variable: role
         - default: ''
           group: Settings
           label: Type
           show_if: rule=MustRunAs
           type: string
-          variable: MustRunAs.type
+          variable: type
         - default: 0
           group: Settings
           label: Level
           show_if: rule=MustRunAs
           type: int
-          variable: MustRunAs.level
+          variable: level
     - default: false
       tooltip: Always accepts the request.
       group: Settings
