@@ -1,5 +1,5 @@
 ---
-version: 0.1.7
+version: 0.1.8
 name: selinux-psp
 displayName: Selinux PSP
 createdAt: '2023-02-13T15:55:48+00:00'
@@ -9,7 +9,7 @@ license: Apache-2.0
 homeURL: https://github.com/kubewarden/selinux-psp-policy
 containersImages:
 - name: policy
-  image: ghcr.io/kubewarden/policies/selinux-psp:v0.1.7
+  image: ghcr.io/kubewarden/policies/selinux-psp:v0.1.8
 keywords:
 - psp
 - container
@@ -17,7 +17,7 @@ keywords:
 - selinux
 links:
 - name: policy
-  url: https://github.com/kubewarden/selinux-psp-policy/releases/download/v0.1.7/policy.wasm
+  url: https://github.com/kubewarden/selinux-psp-policy/releases/download/v0.1.8/policy.wasm
 - name: source
   url: https://github.com/kubewarden/selinux-psp-policy
 provider:
@@ -103,10 +103,3 @@ annotations:
           show_if: rule=MustRunAs
           type: int
           variable: level
-    - default: false
-      tooltip: Always accepts the request.
-      group: Settings
-      show_if: rule=RunAsAny
-      title: Run as any
-      type: boolean
-      variable: RunAsAny
