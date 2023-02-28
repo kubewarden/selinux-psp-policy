@@ -66,10 +66,3 @@ questions:
       show_if: rule=MustRunAs
       type: int
       variable: level
-- default: false
-  tooltip: Always accepts the request.
-  group: Settings
-  show_if: rule=RunAsAny
-  title: Run as any
-  type: boolean
-  variable: RunAsAny
