@@ -85,11 +85,7 @@ impl SELinuxLevel {
             splitted_level.next().unwrap(),
             splitted_level.next().unwrap(),
         );
-        let splitted_categories: Vec<String> = categories
-            .split(',')
-            .into_iter()
-            .map(String::from)
-            .collect();
+        let splitted_categories: Vec<String> = categories.split(',').map(String::from).collect();
         let categories_hashset = HashSet::from_iter(splitted_categories.clone().into_iter());
         Ok(SELinuxLevel {
             level: level.clone(),
@@ -100,17 +96,12 @@ impl SELinuxLevel {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 #[serde(tag = "rule", deny_unknown_fields)]
 pub(crate) enum ExternalSettings {
     MustRunAs(SELinuxOptionsExternal),
+    #[default]
     RunAsAny,
-}
-
-impl Default for ExternalSettings {
-    fn default() -> ExternalSettings {
-        ExternalSettings::RunAsAny
-    }
 }
 
 #[derive(Clone, Debug)]
