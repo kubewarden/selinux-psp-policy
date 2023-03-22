@@ -24,6 +24,4 @@ jobs:
 
     uses: kubewarden/github-actions/.github/workflows/reusable-release-policy-rust.yml@v3.0.4
     with:
-      input-wasm: selinux_psp
       oci-target: ghcr.io/${{ github.repository_owner }}/policies/selinux-psp
-
