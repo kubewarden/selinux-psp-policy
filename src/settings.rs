@@ -86,7 +86,7 @@ impl SELinuxLevel {
             splitted_level.next().unwrap(),
         );
         let splitted_categories: Vec<String> = categories.split(',').map(String::from).collect();
-        let categories_hashset = HashSet::from_iter(splitted_categories.clone().into_iter());
+        let categories_hashset = HashSet::from_iter(splitted_categories.clone());
         Ok(SELinuxLevel {
             level: level.clone(),
             sensitivity: sensitivity.to_string(),
