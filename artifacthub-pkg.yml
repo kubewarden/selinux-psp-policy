@@ -7,7 +7,7 @@
 version: 0.1.12
 name: selinux-psp
 displayName: Selinux PSP
-createdAt: 2023-07-10T16:19:45.037972206Z
+createdAt: 2023-10-16T07:24:37.086889634Z
 description: Replacement for the Kubernetes Pod Security Policy that controls the usage of SELinux
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/selinux-psp-policy
@@ -28,6 +28,10 @@ install: |
   The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
   ```console
   kwctl pull ghcr.io/kubewarden/policies/selinux-psp:v0.1.12
+  ```
+  Then, generate the policy manifest and tune it to your liking. For example:
+  ```console
+  kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/kubewarden/policies/selinux-psp:v0.1.12
   ```
 maintainers:
 - name: Kubewarden developers
