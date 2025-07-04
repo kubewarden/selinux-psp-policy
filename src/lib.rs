@@ -170,7 +170,6 @@ fn is_selinux_compliant(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 
