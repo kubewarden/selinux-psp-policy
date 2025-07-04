@@ -138,7 +138,7 @@ impl kubewarden::settings::Validatable for ExternalSettings {
                     );
                 }
                 if let Err(err) = TryInto::<Settings>::try_into(self.clone()) {
-                    return Err(format!("settings are invalid: {}", err));
+                    return Err(format!("settings are invalid: {err}"));
                 }
                 Ok(())
             }
